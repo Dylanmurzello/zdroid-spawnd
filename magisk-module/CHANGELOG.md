@@ -1,5 +1,17 @@
 # Zdroid Spawn Daemon changelog
 
+## v1.1.7 (2026-06-05)
+
+Mount the chroot's proc/sysfs/dev from the daemon's own boot service.
+
+### Fixes
+
+* **`service.sh` now mounts `proc`, `sysfs`, `/dev`, and `/dev/pts` into the chroot rootfs before starting the daemon.** zd-spawnd chroots the child (`spawn_child`) but never mounted the virtual filesystems; they were only present if NetHunter's stock launcher or a manual `mount` had run since boot. Those are runtime mounts that die on reboot, so a fresh boot left the chroot with an empty `/proc` — every read of `/proc/cpuinfo`, `/proc/sys/kernel/random/{uuid,boot_id}`, or sysfs cpu topology failed. fastfetch and hwloc abort, `nproc` / uuid / dbus machine-id break, and the patched `.bash_profile`'s `/dev/fd` symlink setup re-ran verbosely on every login because `/proc/self/fd` no longer resolved. The mounts are idempotent and re-checked on each daemon (re)start, so they survive reboots and supervisor restarts, dropping the dependency on an external launcher mounting the rootfs first.
+
+### Upgrade notes
+
+* Reinstall + reboot to pick up the boot-time mounts. If you added a `/data/adb/service.d/` stopgap that mounted these manually, remove it once this release is installed.
+
 ## v1.1.6 (2026-05-12)
 
 Symmetric bind-mount. Host paths == chroot paths. Translation layer obsoleted.

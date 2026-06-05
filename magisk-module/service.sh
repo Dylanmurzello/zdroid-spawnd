@@ -93,6 +93,42 @@ until [ "$(getprop sys.user.0.ce_available 2>/dev/null)" = "true" ]; do
 done
 log "user 0 CE storage unlocked (after ${ce_wait_iters}s)"
 
+# Mount the chroot rootfs's virtual filesystems before the daemon starts
+# spawning shells into it. zd-spawnd chroots the child (spawn_child in
+# zd-spawnd.c) but does not mount proc/sysfs/dev — those are runtime
+# mounts that die on reboot, and without them the chroot has an empty
+# /proc. That breaks everything reading /proc/cpuinfo,
+# /proc/sys/kernel/random/*, or sysfs cpu topology (fastfetch, hwloc,
+# nproc, uuid, dbus machine-id). Previously these were only present if
+# NetHunter's stock launcher (or a manual mount) had run since boot;
+# making the daemon's own service own them drops that dependency.
+#
+# Idempotent: a no-op when already mounted, so it's safe to re-run and
+# survives the supervisor restarting the daemon. CHROOT_ROOT must match
+# `g_chroot_root` in zd-spawnd.c and the [chroot] root in zd-runtime.toml.
+CHROOT_ROOT="/data/local/nhsystem/kali-arm64"
+chroot_vfs_mount() {            # $1 = subdir under rootfs; rest = mount args
+    _target="$CHROOT_ROOT/$1"
+    shift
+    if grep -q " $_target " /proc/mounts 2>/dev/null; then
+        return 0
+    fi
+    mkdir -p "$_target"
+    if mount "$@" "$_target"; then
+        log "mounted $_target"
+    else
+        log "FAILED to mount $_target"
+    fi
+}
+if [ -d "$CHROOT_ROOT/root" ]; then
+    chroot_vfs_mount proc    -t proc  proc
+    chroot_vfs_mount sys     -t sysfs sysfs
+    chroot_vfs_mount dev     -o bind  /dev
+    chroot_vfs_mount dev/pts -o bind  /dev/pts
+else
+    log "chroot rootfs absent at $CHROOT_ROOT; skipping vfs mounts"
+fi
+
 # Supervise loop. `exec` would replace the service.sh process; we use a
 # subshell so service.sh exits and Magisk's service tracker knows the
 # trigger ran. The supervisor backgrounds itself with nohup.
