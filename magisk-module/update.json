@@ -1,6 +1,6 @@
 {
-  "version": "v1.1.6",
-  "versionCode": 8,
-  "zipUrl": "https://github.com/Dylanmurzello/zdroid-spawnd/releases/download/v1.1.6/zdroid-spawnd-v1.1.6.zip",
+  "version": "v1.1.7",
+  "versionCode": 9,
+  "zipUrl": "https://github.com/Dylanmurzello/zdroid-spawnd/releases/download/v1.1.7/zdroid-spawnd-v1.1.7.zip",
   "changelog": "https://raw.githubusercontent.com/Dylanmurzello/zdroid-spawnd/main/magisk-module/CHANGELOG.md"
 }
